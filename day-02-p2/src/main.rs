@@ -15,7 +15,7 @@ fn main() -> std::io::Result<()> {
         ids.push(id);
     }
 
-    // find pair where only 2 letters are different
+    // find pair where only 1 letter is different
     let mut counter: usize = 0;
     'id: for id in &ids {
         counter += 1;
@@ -41,6 +41,7 @@ fn main() -> std::io::Result<()> {
                     break;
                 }
             }
+            // we've found our match!
             if diffs == 1 {
                 right.remove(idx);
                 let answer: String = right.into_iter().collect();
