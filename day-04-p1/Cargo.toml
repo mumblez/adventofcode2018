@@ -1,0 +1,9 @@
+[package]
+name = "day-04-p1"
+version = "0.1.0"
+authors = ["Yusuf Tran <yusuf.tran@karhoo.com>"]
+edition = "2018"
+
+[dependencies]
+chrono = "0.4"
+regex = "1"
