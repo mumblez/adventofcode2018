@@ -77,8 +77,27 @@ fn main() -> std::io::Result<()> {
             max_minute = *minute;
         }
     }
+
+    // part 1
     println!("guard: {}, total sleep: {}", current_guard, max_sleep);
     println!("minute: {}, total: {}", max_minute, max_total);
+    println!("answer: {}", current_guard * max_minute);
+
+    // find guard with most frequent minute asleep
+    max_minute = 0;
+    max_total = 0;
+    for (id, guard) in &guards {
+        for (minute, total) in &guard.minute_asleep {
+            if *total > max_total {
+                max_total = *total;
+                max_minute = *minute;
+                current_guard = *id;
+            }
+        }
+    }
+
+    // part 2
+    println!("guard: {}, minute: {}", current_guard, max_minute);
     println!("answer: {}", current_guard * max_minute);
 
     Ok(())
