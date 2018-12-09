@@ -78,6 +78,7 @@ fn main() -> std::io::Result<()> {
     for claim in &claims {
         if (claim.width * claim.height) == count_id(&claim, &grid, &overlap_grid) {
             println!("Claim with no overlapping: {}", claim.id);
+            break;
         }
     }
 
