@@ -1,38 +1,44 @@
 use std::fs::File;
 use std::io::prelude::*;
 
-// not the fastest solution, can be optimised!
-fn main() -> std::io::Result<()> {
-    let mut file = File::open("input.txt")?;
-    let mut input = String::new();
-    file.read_to_string(&mut input)?;
-    input = input.trim().to_string();
-
+fn run_reaction(input: &[u8]) -> u64 {
+    let mut input_bytes = input.to_owned();
+    let input_bytes_len = input_bytes.len();
     loop {
-        let mut tally = 0_usize;
-        let input_clone = input.clone().trim().to_string();
         let mut modified = false;
-        let mut skip = false;
 
-        for (idx, c) in input_clone.chars().enumerate() {
-            if skip {
-                skip = false;
+        // for (left_idx, c) in input_bytes.iter_mut().enumerate() {
+        for left_idx in 0..input_bytes.len() {
+            // skip left_idx if on space
+            if input_bytes[left_idx] == b' ' {
                 continue;
             }
-            let polarity: char = if c.is_ascii_uppercase() {
-                c.to_ascii_lowercase()
-            } else {
-                c.to_ascii_uppercase()
-            };
 
-            if idx != (input_clone.len() - 1) {
-                let next_char: char = input_clone.chars().nth(idx + 1).unwrap();
-                if next_char == polarity {
-                    input.remove(idx - tally);
-                    input.remove(idx - tally);
-                    tally += 2;
+            // ensure right_idx is always after left_idx
+            let mut right_idx = left_idx + 1;
+
+            // move right_idx along, skipping spaces
+            while right_idx != input_bytes_len {
+                if input_bytes[right_idx] == b' ' {
+                    right_idx += 1;
+                } else {
+                    break;
+                }
+            }
+
+            if right_idx != input_bytes_len {
+                let cl = input_bytes[left_idx] as char;
+                let cr = input_bytes[right_idx] as char;
+                let polar = if cl.is_ascii_uppercase() {
+                    cl.to_ascii_lowercase()
+                } else {
+                    cl.to_ascii_uppercase()
+                };
+
+                if cr == polar {
+                    input_bytes[left_idx] = b' ';
+                    input_bytes[right_idx] = b' ';
                     modified = true;
-                    skip = true;
                 }
             } else {
                 break;
@@ -42,7 +48,18 @@ fn main() -> std::io::Result<()> {
             break;
         }
     }
+    input_bytes.iter().filter(|x| **x != b' ').count() as u64
+}
 
-    println!("{}", input.len());
+// not the fastest solution, can be optimised!
+fn main() -> std::io::Result<()> {
+    let mut file = File::open("input.txt")?;
+    // let mut file = File::open("debug.txt")?;
+    let mut input = String::new();
+    file.read_to_string(&mut input)?;
+    let input_bytes = input.trim().to_string().into_bytes();
+
+    let res = run_reaction(&input_bytes);
+    println!("{}", res);
     Ok(())
 }

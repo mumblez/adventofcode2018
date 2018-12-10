@@ -14,27 +14,44 @@ fn polarity(c: &char) -> char {
 }
 
 // not the fastest solution, can be optimised!
-fn run_reaction(input: &String) -> u64 {
-    let mut new_input = input.clone().trim().to_string();
+fn run_reaction(input: &[u8]) -> u64 {
+    let mut input_bytes = input.to_owned();
+    let input_bytes_len = input_bytes.len();
     loop {
-        let mut tally = 0_usize;
-        let input_clone = new_input.clone().trim().to_string();
         let mut modified = false;
-        let mut skip = false;
 
-        for (idx, c) in input_clone.chars().enumerate() {
-            if skip {
-                skip = false;
+        // for (left_idx, c) in input_bytes.iter_mut().enumerate() {
+        for left_idx in 0..input_bytes.len() {
+            // skip left_idx if on space
+            if input_bytes[left_idx] == b' ' {
                 continue;
             }
-            if idx != (input_clone.len() - 1) {
-                let next_char: char = input_clone.chars().nth(idx + 1).unwrap();
-                if next_char == polarity(&c) {
-                    new_input.remove(idx - tally);
-                    new_input.remove(idx - tally);
-                    tally += 2;
+
+            // ensure right_idx is always after left_idx
+            let mut right_idx = left_idx + 1;
+
+            // move right_idx along, skipping spaces
+            while right_idx != input_bytes_len {
+                if input_bytes[right_idx] == b' ' {
+                    right_idx += 1;
+                } else {
+                    break;
+                }
+            }
+
+            if right_idx != input_bytes_len {
+                let cl = input_bytes[left_idx] as char;
+                let cr = input_bytes[right_idx] as char;
+                let polar = if cl.is_ascii_uppercase() {
+                    cl.to_ascii_lowercase()
+                } else {
+                    cl.to_ascii_uppercase()
+                };
+
+                if cr == polar {
+                    input_bytes[left_idx] = b' ';
+                    input_bytes[right_idx] = b' ';
                     modified = true;
-                    skip = true;
                 }
             } else {
                 break;
@@ -44,7 +61,7 @@ fn run_reaction(input: &String) -> u64 {
             break;
         }
     }
-    new_input.len() as u64
+    input_bytes.iter().filter(|x| **x != b' ').count() as u64
 }
 
 fn main() -> std::io::Result<()> {
@@ -53,7 +70,6 @@ fn main() -> std::io::Result<()> {
     let mut input = String::new();
     file.read_to_string(&mut input)?;
     input = input.trim().to_string();
-    // let mut lowest_total = 50000_u64;
     let lowest_total = Arc::new(Mutex::new(50000_u64));
     let units = "abcdefghijklmnopqrstuvwxyz";
 
@@ -61,11 +77,12 @@ fn main() -> std::io::Result<()> {
         let mut input_copy = input.clone();
         input_copy.retain(|c| c != unit);
         input_copy.retain(|c| c != polarity(&unit));
-        let result = run_reaction(&input_copy);
+        let input_bytes = input_copy.trim().to_string().into_bytes();
+        let result = run_reaction(&input_bytes);
         let mut lt = lowest_total.lock().unwrap();
         if result < *lt {
             *lt = result;
-            println!("total: {}", *lt);
+            println!("new total: {}", *lt);
         }
     });
     println!("answer {}", *lowest_total.lock().unwrap());
