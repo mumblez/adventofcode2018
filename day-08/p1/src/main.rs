@@ -1,22 +1,23 @@
+use failure::Error;
 use std::fs::File;
 use std::io::prelude::*;
 use std::io::BufReader;
 
-fn parse_input(input: &str) -> Vec<u64> {
+fn parse_input(input: &str) -> Result<Vec<u64>, Error> {
     let file = File::open(input).unwrap();
     let mut buf_reader = BufReader::new(file);
     let mut contents = String::new();
     buf_reader.read_to_string(&mut contents).unwrap();
 
-    contents
+    Ok(contents
         .split_whitespace()
         .map(|x| x.parse::<u64>().unwrap())
-        .collect()
+        .collect())
 }
 
-fn main() {
+fn main() -> Result<(), Error> {
     // let input = parse_input("debug.txt");
-    let input = parse_input("input.txt");
+    let input = parse_input("input.txt")?;
     let mut answer: u64 = 0;
 
     // instead of building a tree / graph we'll track indexes as we're reading the data serially
@@ -70,4 +71,5 @@ fn main() {
 
     // answer
     println!("answer: {}", answer);
+    Ok(())
 }
