@@ -4,10 +4,10 @@ use std::io::prelude::*;
 use std::io::BufReader;
 
 fn parse_input(input: &str) -> Result<Vec<u64>, Error> {
-    let file = File::open(input).unwrap();
+    let file = File::open(input)?;
     let mut buf_reader = BufReader::new(file);
     let mut contents = String::new();
-    buf_reader.read_to_string(&mut contents).unwrap();
+    buf_reader.read_to_string(&mut contents)?;
 
     Ok(contents
         .split_whitespace()
@@ -37,21 +37,17 @@ fn main() -> Result<(), Error> {
                 i += 1;
                 answer += input[i];
             }
-            loop {
-                if let Some(last) = childs.last_mut() {
-                    *last -= 1;
-                    if *last == 0 {
-                        childs.pop().unwrap();
-                        // read remaining data
-                        if let Some(last_data) = data.last() {
-                            for _ in 0..*last_data {
-                                i += 1;
-                                answer += input[i];
-                            }
-                            data.pop();
+            while let Some(last) = childs.last_mut() {
+                *last -= 1;
+                if *last == 0 {
+                    childs.pop().unwrap();
+                    // read remaining data
+                    if let Some(last_data) = data.last() {
+                        for _ in 0..*last_data {
+                            i += 1;
+                            answer += input[i];
                         }
-                    } else {
-                        break;
+                        data.pop();
                     }
                 } else {
                     break;
