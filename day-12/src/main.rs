@@ -1,44 +1,30 @@
 use failure::Error;
 use regex::Regex;
+use std::collections::HashSet;
 use std::fs::File;
 use std::io::prelude::*;
 use std::io::BufReader;
 
-#[derive(Debug)]
-struct Pattern {
-    pattern: String,
-    plant: bool,
-}
-
-fn parse_input(file: &str) -> Result<(Vec<Pattern>, String), Error> {
+fn parse_input(file: &str) -> Result<(HashSet<String>, String), Error> {
     let file = File::open(file)?;
     let reader = BufReader::new(file);
     let mut istate_found = false;
     let mut istate = String::new();
-    let mut patterns = Vec::<Pattern>::new();
+    // let mut patterns = Vec::<Pattern>::new();
+    let mut patterns: HashSet<String> = HashSet::new();
 
     let re_state = Regex::new(r"initial state:\s+(?P<state>[#\.]+)")?;
-    let re_patterns = Regex::new(r"(?P<p1>[\.#]{5}) => (?P<p2>[\.#]{1})").unwrap();
+    // let re_patterns = Regex::new(r"(?P<p1>[\.#]{5}) => (?P<p2>[\.#]{1})").unwrap();
+    let re_patterns = Regex::new(r"(?P<p1>[\.#]{5}) => #").unwrap();
 
     for line in reader.lines() {
         let input = line.unwrap();
         if let Some(capture_patterns) = re_patterns.captures(&input) {
-            let mut plant_action = false;
-            if let Ok(p) = capture_patterns["p2"].parse::<String>() {
-                if p == "#" {
-                    plant_action = true;
-                }
-            }
-
+            // only add valid ones to a hashmap
             if let Ok(p) = capture_patterns["p1"].parse::<String>() {
-                let pot = Pattern {
-                    pattern: p,
-                    plant: plant_action,
-                };
-                patterns.push(pot);
+                patterns.insert(p.to_owned());
             }
         }
-
         if !istate_found {
             let capture_state = re_state.captures(&input).unwrap();
             if let Ok(state) = capture_state["state"].parse::<String>() {
@@ -47,7 +33,6 @@ fn parse_input(file: &str) -> Result<(Vec<Pattern>, String), Error> {
             }
         }
     }
-
     Ok((patterns, istate))
 }
 
@@ -80,54 +65,83 @@ fn main() -> Result<(), Error> {
     let mut last_idx = 0_i64;
     let mut total = 0_i64;
     let mut last_res = String::new();
+    last_res = state.clone();
+    let mut last_pattern = String::new();
+    let mut pattern_repeat = 0;
 
-    // for g in 0..=20 as u64 {
-    // p1
-    for g in 0..=50_000_000_000 as u64 {
-        // p2
+    // make loop as tight as possible
+    for g in 0..=150 as u64 {
         let mut gen = String::new();
-        if g == 0 {
-            gen = state.clone();
-        } else {
-            gen.push_str(last_res.as_str());
-        }
-        let idx_shift = padding(&mut gen);
-        last_idx += idx_shift as i64;
+        gen.push_str(last_res.as_str());
+        last_idx += padding(&mut gen) as i64;
         let mut res = String::new();
         res.push_str("..");
 
-        // maybe convert patterns to hashmap to improve performance?
+        // can we parallellise this?
         (0..(gen.len() - 5)).for_each(|x| {
-            let mut pattern_found = false;
-            patterns.iter().for_each(|p| {
-                if p.pattern == &gen[x..x + 5] {
-                    pattern_found = true;
-                    if p.plant {
-                        res.push('#');
-                    } else {
-                        res.push('.');
-                    }
-                }
-            });
-            if !pattern_found {
+            if patterns.contains(&gen[x..x + 5]) {
+                res.push('#');
+            } else {
                 res.push('.');
             }
         });
 
-        // calculate on last run only
-        // if g == 20 {
-        // p1
-        if g == 50_000_000_000 {
-            // p2
-            gen.chars().enumerate().for_each(|(x, c)| {
-                if c == '#' {
-                    total += x as i64 - last_idx;
-                }
-            });
-            println!("");
-            println!("total: {}", total);
-        }
         last_res = res;
+        // p1
+        // if g == 20 {
+        //     let mut total = 0_i64;
+        //     gen.chars().enumerate().for_each(|(x, c)| {
+        //         if c == '#' {
+        //             // total += x as i64 - last_idx;
+        //             total += x as i64 - last_idx;
+        //         }
+        //     });
+        //     println!("total: {}", total)
+        // }
+
+        // p2
+        let mut subtotal = 0_i64;
+        gen.chars().enumerate().for_each(|(x, c)| {
+            if c == '#' {
+                // total += x as i64 - last_idx;
+                subtotal += x as i64 - last_idx;
+            }
+        });
+        // seems to repeat after 118 onwards, with diff of 73
+        // if we run up to 200 and save the last total (16376), then add to
+        // (50,000,000,000 - 200) * 73 + 16376 = 3650000001776
+        //
+        // trim of preceeding '.' to make patterns obvious
+        let first_plant = last_res.find('#').unwrap();
+        print!("res: {}", &last_res[first_plant..]);
+        println!(
+            "g: {}, last_idx: {}, total: {}, diff: {}",
+            g,
+            last_idx,
+            subtotal,
+            subtotal - total
+        );
+
+        // record and compare against last pattern iteration
+        if &last_res[first_plant..] == last_pattern {
+            println!("pattern repeats!!!");
+            pattern_repeat += 1;
+            // ensure we repeat a few times consecutively
+            if pattern_repeat > 5 {
+                // now we can figure out p2 answer
+                let answer: u64 =
+                    (50_000_000_000 - g) * (subtotal - total) as u64 + subtotal as u64;
+                println!("p2 answer: {}", answer);
+                break;
+            }
+        } else {
+            // reset if not consecutive!
+            pattern_repeat = 0;
+        }
+        last_pattern.clear();
+        last_pattern.push_str(&last_res[first_plant..]);
+
+        total = subtotal;
     }
 
     Ok(())
